@@ -4,7 +4,7 @@ namespace Analizer.Utils
 {
     public static class DesktopContext
     {
-        public static ScreenShoot CapturePrimaryScreenAsJpeg(int? quality = null)
+        public static ScreenShoot CapturePrimaryScreenAsJpeg(int quality)
         {
             var screenShoot = new ScreenShoot(Screen.PrimaryScreen, quality);
             using (var g = Graphics.FromImage(screenShoot.Bitmap))

@@ -15,14 +15,16 @@ namespace Analizer
                 if (string.IsNullOrWhiteSpace(cmd)) continue;
                 if (cmd.Trim().Equals("sair", StringComparison.OrdinalIgnoreCase)) break;
 
-                var ss = DesktopContext.CapturePrimaryScreenAsJpeg();
-                Console.WriteLine($"Captured primary {ss.Width}x{ss.Height} -> sent {ss.Bitmap.Width}x{ss.Bitmap.Height} ({ss.ToBytes().Length / 1024} KB)");
+                var screenShot = DesktopContext.CapturePrimaryScreenAsJpeg(70);
+
+                Console.WriteLine(screenShot.ToString());
 
 
                 ClickDecision decision;
                 try
                 {
-                    decision = await OpenAiDesktop.GetClickDecisionAsync(cmd, bytes, sentW, sentH);
+                    decision = await OpenAiDesktop.GetClickDecisionAsync(cmd, screenShot);
+                    Console.WriteLine($"Decisão: {decision.ToString()}");
                 }
                 catch (Exception ex)
                 {

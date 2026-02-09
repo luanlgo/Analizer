@@ -1,5 +1,6 @@
 ﻿using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.Windows.Forms;
 
 namespace Analizer.Domain
 {
@@ -8,34 +9,40 @@ namespace Analizer.Domain
         public const int DEFAULT_QUALITY = 70;
         public const int DEFAULT_MAX_WIDTH = 2048;
 
+        private Screen _screen;
+        public Screen Screen 
+        { 
+            get => _screen;
+            set 
+            {
+                _screen = value ?? throw new InvalidOperationException("PrimaryScreen is null.");
+
+                Bounds = value.Bounds;
+                Width = Bounds.Width;
+                Height = Bounds.Height;
+            }
+        }
         public Rectangle Bounds { get; set; }
         public int Width { get; set; }
         public int MaxWidth { get; set; } = DEFAULT_MAX_WIDTH;
         public int Height { get; set; }
-        public int Quality { get; set; }
+        private int _quality = DEFAULT_QUALITY;
+        public int Quality
+        {
+            get => _quality;
+            set
+            {
+                _quality = Math.Clamp(value, 1, 100);
+            }
+        }
         public ImageFormat Format { get; set; } = ImageFormat.Jpeg;
         public Bitmap Bitmap { get; set; } = new Bitmap(1, 1);
 
-        public ScreenShoot(Screen? screen, int? quality)
+        public ScreenShoot(Screen screen, int quality)
         {
-            SetScreen(screen);
-            SetQualidty(quality);
+            Screen = screen;
+            Quality = quality;
             SetBitmap();
-        }
-
-        public void SetScreen(Screen? screen)
-        {
-            if (screen == null)
-                throw new InvalidOperationException("PrimaryScreen is null.");
-            
-            Bounds = screen.Bounds;
-            Width = Bounds.Width;
-            Height = Bounds.Height;
-        }
-
-        public void SetQualidty(int? quality)
-        {
-            Quality = Math.Clamp(quality ?? DEFAULT_QUALITY, 1, 100);
         }
 
         public byte[] ToBytes()
@@ -84,6 +91,21 @@ namespace Analizer.Domain
                 if (c.FormatID == format.Guid) return c;
 
             throw new InvalidOperationException($"{Format.ToString()} encoder not found.");
+        }
+    
+        public int GetWidthToSend()
+        {
+            return Bitmap.Width;
+        }
+
+        public int GetHeightToSend()
+        {
+            return Bitmap.Height;
+        }
+
+        public override string ToString()
+        {
+            return $"Captured primary {Width}x{Height} -> sent {Bitmap.Width}x{Bitmap.Height} ({ToBytes().Length / 1024} KB)";
         }
     }
 }
