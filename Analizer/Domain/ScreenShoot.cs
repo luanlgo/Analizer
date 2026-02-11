@@ -1,19 +1,17 @@
-﻿using System.Drawing.Drawing2D;
-using System.Drawing.Imaging;
-using System.Windows.Forms;
+﻿using System.Drawing.Imaging;
+using System.IO;
 
 namespace Analizer.Domain
 {
     public class ScreenShoot
     {
         public const int DEFAULT_QUALITY = 70;
-        public const int DEFAULT_MAX_WIDTH = 2048;
 
         private Screen _screen;
-        public Screen Screen 
-        { 
+        public Screen Screen
+        {
             get => _screen;
-            set 
+            set
             {
                 _screen = value ?? throw new InvalidOperationException("PrimaryScreen is null.");
 
@@ -24,7 +22,6 @@ namespace Analizer.Domain
         }
         public Rectangle Bounds { get; set; }
         public int Width { get; set; }
-        public int MaxWidth { get; set; } = DEFAULT_MAX_WIDTH;
         public int Height { get; set; }
         private int _quality = DEFAULT_QUALITY;
         public int Quality
@@ -56,32 +53,38 @@ namespace Analizer.Domain
             return ms.ToArray();
         }
 
+        // Compressão POR QUALIDADE APENAS: mantém width/height originais.
+        // Tenta reduzir a qualidade em passos até ficar abaixo de maxKb (KB).
+        public byte[] ToBytesCompressed(int maxKb, int minQuality = 30)
+        {
+            if (maxKb <= 0) return ToBytes();
+
+            byte[] lastBytes = ToBytes();
+            if (lastBytes.Length <= maxKb * 1024) return lastBytes;
+
+            // Tentar reduzir qualidade em passos (sem redimensionar)
+            for (int q = Quality; q >= minQuality; q -= 5)
+            {
+                using var ms = new MemoryStream();
+                var encoder = GetEncoder(Format);
+                using var encoderParams = new EncoderParameters(1);
+                encoderParams.Param[0] = new EncoderParameter(Encoder.Quality, (long)q);
+
+                Bitmap.Save(ms, encoder, encoderParams);
+                var bytes = ms.ToArray();
+                if (bytes.Length <= maxKb * 1024) return bytes;
+                lastBytes = bytes;
+            }
+
+            // Se não conseguiu, retorna o último (mais comprimido via qualidade) — dimensions mantidos.
+            return lastBytes;
+        }
+
         public void SetBitmap(Bitmap? newBitMap = null)
         {
             var old = Bitmap;
             Bitmap = newBitMap ?? new Bitmap(Width, Height, PixelFormat.Format24bppRgb);
             old.Dispose();
-        }
-
-        public void ResizeToMaxWidth()
-        {
-            if (Bitmap.Width <= MaxWidth)
-            {
-                Bitmap = new Bitmap(Bitmap);
-                return;
-            }
-
-            var ratio = (double)MaxWidth / Bitmap.Width;
-            var newHeight = (int)Math.Round(Bitmap.Height * ratio);
-
-            var resized = new Bitmap(MaxWidth, newHeight);
-            using var g = Graphics.FromImage(resized);
-            g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-            g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-            g.SmoothingMode = SmoothingMode.HighQuality;
-
-            g.DrawImage(Bitmap, 0, 0, MaxWidth, newHeight);
-            SetBitmap(resized);
         }
 
         private ImageCodecInfo GetEncoder(ImageFormat format)
@@ -91,16 +94,6 @@ namespace Analizer.Domain
                 if (c.FormatID == format.Guid) return c;
 
             throw new InvalidOperationException($"{Format.ToString()} encoder not found.");
-        }
-    
-        public int GetWidthToSend()
-        {
-            return Bitmap.Width;
-        }
-
-        public int GetHeightToSend()
-        {
-            return Bitmap.Height;
         }
 
         public override string ToString()

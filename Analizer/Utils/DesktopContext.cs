@@ -10,7 +10,7 @@ namespace Analizer.Utils
             using (var g = Graphics.FromImage(screenShoot.Bitmap))
                 g.CopyFromScreen(screenShoot.Bounds.Left, screenShoot.Bounds.Top, 0, 0, screenShoot.Bitmap.Size);
 
-            screenShoot.ResizeToMaxWidth();
+            // Não redimensionar — preservar width/height originais
             return screenShoot;
         }
     }
